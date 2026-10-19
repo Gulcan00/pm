@@ -15,7 +15,7 @@ import { KanbanColumn } from "@/components/KanbanColumn";
 import { KanbanCardPreview } from "@/components/KanbanCardPreview";
 import { createId, initialData, moveCard, type BoardData } from "@/lib/kanban";
 
-export const KanbanBoard = () => {
+export const KanbanBoard = ({ onLogout }: { onLogout?: () => void }) => {
   const [board, setBoard] = useState<BoardData>(() => initialData);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
 
@@ -119,6 +119,15 @@ export const KanbanBoard = () => {
                 One board. Five columns. Zero clutter.
               </p>
             </div>
+            {onLogout && (
+              <button
+                type="button"
+                onClick={onLogout}
+                className="rounded-lg border border-(--stroke) px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-background"
+              >
+                Sign out
+              </button>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-4">
             {board.columns.map((column) => (

@@ -1,0 +1,15 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    environment:
+      DATABASE_PATH: /data/kanban.sqlite3
+      SESSION_SECRET: ${SESSION_SECRET:-local-development-session-secret}
+    volumes:
+      - kanban-data:/data
+
+volumes:
+  kanban-data:
