@@ -6,10 +6,10 @@
 - `next.config.ts` enables static export; `npm run build` writes the deployable site to `out/`. Docker builds this export and FastAPI serves it at `/`.
 - `src/app/page.tsx` renders the Kanban board. `src/app/layout.tsx` loads the global stylesheet, fonts, and page metadata.
 - `src/components/AuthGate.tsx` checks the FastAPI session and renders the login form or board. Authentication requests are same-origin; the signed session cookie is HttpOnly and managed by FastAPI.
-- `src/components/KanbanBoard.tsx` is the client-side owner of the current board state. It initializes from `src/lib/kanban.ts` and keeps edits in memory; it does not currently call a backend or persist data.
-- `KanbanColumn.tsx`, `KanbanCard.tsx`, `NewCardForm.tsx`, and `KanbanCardPreview.tsx` compose the board UI. Drag-and-drop uses `@dnd-kit`; `KanbanCard` currently supports removal, not editing.
-- `src/lib/kanban.ts` defines the `Card`, `Column`, and `BoardData` types, sample board data, card ID generation, and the `moveCard` operation.
-- AI chat is not implemented yet. Implement it only in the stage described by `../docs/PLAN.md`.
+- `src/components/KanbanBoard.tsx` owns the current board view state and loads/mutates it through the authenticated FastAPI API.
+- `KanbanColumn.tsx`, `KanbanCard.tsx`, `NewCardForm.tsx`, and `KanbanCardPreview.tsx` compose the board UI. Drag-and-drop uses `@dnd-kit`; card and column edits persist through the board API.
+- `src/lib/kanban.ts` defines board and AI operation types, sample board data, card ID generation, and the `moveCard` operation.
+- `AIChatSidebar.tsx` keeps chat history in component state for the active page session. AI-proposed operations are reviewed and only applied after explicit user approval; history is discarded on reload or logout.
 
 ## Conventions
 

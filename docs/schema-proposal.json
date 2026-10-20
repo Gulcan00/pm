@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Kanban persistence snapshot proposal",
+  "description": "Proposed JSON representation of persisted users, boards, columns, and cards. Relational constraints are enforced by SQLite as described in DATABASE.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "users", "boards", "columns", "cards"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "users": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/user" }
+    },
+    "boards": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/board" }
+    },
+    "columns": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/column" }
+    },
+    "cards": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/card" }
+    }
+  },
+  "$defs": {
+    "user": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "username"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "username": { "type": "string", "minLength": 1 }
+      }
+    },
+    "board": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "user_id"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "user_id": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "column": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "board_id", "key", "title", "position"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "enum": [
+            "col-backlog",
+            "col-discovery",
+            "col-progress",
+            "col-review",
+            "col-done"
+          ]
+        },
+        "board_id": { "type": "integer", "minimum": 1 },
+        "key": {
+          "type": "string",
+          "enum": ["backlog", "discovery", "progress", "review", "done"]
+        },
+        "title": { "type": "string", "minLength": 1 },
+        "position": { "type": "integer", "minimum": 0, "maximum": 4 }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "id": { "const": "col-backlog" },
+            "key": { "const": "backlog" },
+            "position": { "const": 0 }
+          }
+        },
+        {
+          "properties": {
+            "id": { "const": "col-discovery" },
+            "key": { "const": "discovery" },
+            "position": { "const": 1 }
+          }
+        },
+        {
+          "properties": {
+            "id": { "const": "col-progress" },
+            "key": { "const": "progress" },
+            "position": { "const": 2 }
+          }
+        },
+        {
+          "properties": {
+            "id": { "const": "col-review" },
+            "key": { "const": "review" },
+            "position": { "const": 3 }
+          }
+        },
+        {
+          "properties": {
+            "id": { "const": "col-done" },
+            "key": { "const": "done" },
+            "position": { "const": 4 }
+          }
+        }
+      ]
+    },
+    "card": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "board_id", "column_id", "title", "details", "position"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "board_id": { "type": "integer", "minimum": 1 },
+        "column_id": {
+          "type": "string",
+          "enum": [
+            "col-backlog",
+            "col-discovery",
+            "col-progress",
+            "col-review",
+            "col-done"
+          ]
+        },
+        "title": { "type": "string", "minLength": 1 },
+        "details": { "type": "string" },
+        "position": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

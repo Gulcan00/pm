@@ -83,16 +83,7 @@ export const AuthGate = () => {
   }
 
   if (status === "signed-in") {
-    return (
-      <>
-        {error && (
-          <p role="alert" className="sr-only">
-            {error}
-          </p>
-        )}
-        <KanbanBoard onLogout={handleLogout} />
-      </>
-    );
+    return <KanbanBoard onLogout={handleLogout} logoutError={error} />;
   }
 
   return (

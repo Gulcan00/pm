@@ -15,6 +15,13 @@ export type BoardData = {
   cards: Record<string, Card>;
 };
 
+export type BoardOperation =
+  | { type: "create_card"; column_id: string; title: string; details?: string }
+  | { type: "update_card"; card_id: string; title?: string; details?: string }
+  | { type: "move_card"; card_id: string; column_id: string; position: number }
+  | { type: "delete_card"; card_id: string }
+  | { type: "rename_column"; column_id: string; title: string };
+
 export const initialData: BoardData = {
   columns: [
     { id: "col-backlog", title: "Backlog", cardIds: ["card-1", "card-2"] },

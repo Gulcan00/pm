@@ -1,8 +1,14 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AuthGate } from "@/components/AuthGate";
+import { initialData, type BoardData } from "@/lib/kanban";
 
 const mockFetch = vi.fn();
+const emptyBoard: BoardData = {
+  columns: initialData.columns.map(({ id, title }) => ({ id, title, cardIds: [] })),
+  cards: {},
+};
+const boardResponse = { ok: true, json: async () => emptyBoard } as Response;
 
 describe("AuthGate", () => {
   beforeEach(() => {
@@ -26,7 +32,8 @@ describe("AuthGate", () => {
   it("shows the board after a successful login", async () => {
     mockFetch
       .mockResolvedValueOnce({ ok: false } as Response)
-      .mockResolvedValueOnce({ ok: true } as Response);
+      .mockResolvedValueOnce({ ok: true } as Response)
+      .mockResolvedValueOnce(boardResponse);
     const user = userEvent.setup();
 
     render(<AuthGate />);
@@ -41,6 +48,7 @@ describe("AuthGate", () => {
     mockFetch
       .mockResolvedValueOnce({ ok: false } as Response)
       .mockResolvedValueOnce({ ok: true } as Response)
+      .mockResolvedValueOnce(boardResponse)
       .mockResolvedValueOnce({ ok: true } as Response);
     const user = userEvent.setup();
 
@@ -51,5 +59,20 @@ describe("AuthGate", () => {
     await user.click(await screen.findByRole("button", { name: "Sign out" }));
 
     expect(await screen.findByLabelText("Username")).toBeInTheDocument();
+  });
+
+  it("shows a visible error when signing out fails", async () => {
+    mockFetch
+      .mockResolvedValueOnce({ ok: true } as Response)
+      .mockResolvedValueOnce(boardResponse)
+      .mockResolvedValueOnce({ ok: false } as Response);
+    const user = userEvent.setup();
+
+    render(<AuthGate />);
+    await user.click(await screen.findByRole("button", { name: "Sign out" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Unable to sign out. Check your connection and try again."
+    );
   });
 });

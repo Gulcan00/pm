@@ -78,11 +78,11 @@
 
 ## Part 5: Database Schema Proposal and Approval
 
-- [ ] Define a JSON schema proposal covering users, one board per user, fixed board columns, cards, and ordering/ownership relationships.
-- [ ] Document SQLite creation, initialization, ownership, and migration approach in `docs/`.
-- [ ] Specify constraints that prevent cards or boards from being read or changed across users.
-- [ ] Explicitly keep AI conversation history out of the persisted schema.
-- [ ] Present the JSON schema and database approach for user sign-off before implementing persistence or board API routes.
+- [x] Define a JSON schema proposal covering users, one board per user, fixed board columns, cards, and ordering/ownership relationships in `docs/schema-proposal.json`.
+- [x] Document SQLite creation, initialization, ownership, and migration approach in `docs/DATABASE.md`.
+- [x] Specify constraints that prevent cards or boards from being read or changed across users.
+- [x] Explicitly keep AI conversation history out of the persisted schema.
+- [x] Present the JSON schema and database approach for user sign-off before implementing persistence or board API routes.
 
 **Tests:** Validate the proposal as JSON and review it against the one-board-per-user, seeded-user, fixed-column, and card requirements.
 
@@ -90,11 +90,11 @@
 
 ## Part 6: Persistent Backend Board API
 
-- [ ] Initialize SQLite and create/seed required tables and the MVP user when the database is absent; preserve existing data on normal restarts.
-- [ ] Implement authenticated routes to read the current user's board and update board columns and cards.
-- [ ] Enforce the approved schema constraints and user ownership in every query or mutation.
-- [ ] Validate request data and return consistent errors for invalid or missing resources.
-- [ ] Keep the API limited to board operations needed by the UI and AI workflow.
+- [x] Initialize SQLite and create/seed required tables and the MVP user when the database is absent; preserve existing data on normal restarts.
+- [x] Implement authenticated routes to read the current user's board and update board columns and cards.
+- [x] Enforce the approved schema constraints and user ownership in every query or mutation.
+- [x] Validate request data and return consistent errors for invalid or missing resources.
+- [x] Keep the API limited to board operations needed by the UI and AI workflow.
 
 **Tests:** Backend unit/integration tests for first-run database creation, seeding, restart persistence, board reads and mutations, invalid input, missing records, and user isolation. Use a temporary test database.
 
@@ -102,51 +102,70 @@
 
 ## Part 7: Connect the Frontend to the Backend
 
-- [ ] Replace in-memory initial board ownership with API-loaded board data.
-- [ ] Connect card create, edit, delete, move, and column rename actions to the API.
-- [ ] Add clear loading and recoverable error states without losing unsaved user input unnecessarily.
-- [ ] Keep the current interaction model and styling while ensuring API requests use the authenticated same-origin session.
-- [ ] Cover the integrated user workflow from sign-in through persisted board changes.
+- [x] Replace in-memory initial board ownership with API-loaded board data.
+- [x] Connect card create, edit, delete, move, and column rename actions to the API.
+- [x] Add clear loading and recoverable error states without losing unsaved user input unnecessarily.
+- [x] Keep the current interaction model and styling while ensuring API requests use the authenticated same-origin session.
+- [x] Cover the integrated user workflow from sign-in through persisted board changes.
 
-**Tests:** Frontend unit tests for API states and interactions; backend tests remain green; Playwright tests against the Dockerized app for CRUD, drag-and-drop, rename, reload persistence, and logout protection.
+**Tests:** [x] Frontend unit tests for API states and interactions (11 tests); backend tests (13 tests); Playwright tests against the Dockerized app for CRUD, drag-and-drop, rename, reload persistence, and logout protection (5 tests). Verified card persistence across a container restart.
 
 **Success criteria:** The board shown in the browser is the authenticated user's SQLite-backed board, and supported edits remain after reload and container restart.
 
 ## Part 8: OpenRouter Connectivity
 
-- [ ] Add a backend-only OpenRouter client configured from `OPENROUTER_API_KEY` and model `openai/gpt-oss-120b`.
-- [ ] Keep credentials server-side and provide actionable errors without logging secrets.
-- [ ] Add an opt-in connectivity check that asks `2+2` and verifies a usable response.
-- [ ] Mock the OpenRouter boundary in default automated tests.
+- [x] Add a backend-only OpenRouter client configured from `OPENROUTER_API_KEY` and model `openai/gpt-oss-120b`.
+- [x] Keep credentials server-side and provide actionable errors without logging secrets.
+- [x] Add an opt-in connectivity check that asks `2+2` and verifies a usable response.
+- [x] Mock the OpenRouter boundary in default automated tests.
 
-**Tests:** Unit tests for request construction, successful response parsing, missing credentials, and provider errors using mocks; explicit live `2+2` smoke check only when the user has configured a key and requested the check.
+**Tests:** [x] Six mocked tests cover request construction, response parsing, missing credentials, malformed/provider errors, and the `2+2` check. No live request was made.
 
 **Success criteria:** Automated tests pass without network access or secrets; the opt-in check returns the model's answer through the backend without exposing the API key.
 
 ## Part 9: Structured AI Board Assistant API
 
-- [ ] Define and validate a structured response containing assistant text and an optional set of board operations.
-- [ ] Send the current user's board JSON, current question, and transient conversation history to the model on every assistant request.
-- [ ] Instruct the model to propose only supported board operations; validate all proposed operations server-side against the authenticated user's board.
-- [ ] Apply valid operations through the same persistence rules as normal board mutations and return the assistant text plus the resulting board or board changes.
-- [ ] Keep conversation history in the active client session only; do not persist it in SQLite or server logs.
-- [ ] Handle malformed model output, rejected operations, and provider errors without applying partial or invalid board changes.
+- [x] Define and validate a structured response containing assistant text and an optional set of board operations.
+- [x] Send the current user's board JSON, current question, and transient conversation history to the model on every assistant request.
+- [x] Instruct the model to propose only supported board operations; validate all proposed operations server-side against the authenticated user's board.
+- [x] Apply valid operations through the same persistence rules as normal board mutations and return the assistant text plus the resulting board or board changes.
+- [x] Keep conversation history in the active client session only; do not persist it in SQLite or server logs.
+- [x] Handle malformed model output, rejected operations, and provider errors without applying partial or invalid board changes.
 
-**Tests:** Mocked backend tests for request context, structured response parsing, text-only answers, valid and invalid operations, ownership, atomic updates, malformed output, and provider errors. No default test calls OpenRouter live.
+**Tests:** [x] Mocked backend tests cover request context, structured response parsing, text-only answers, all supported operations, ownership, atomic rollback, malformed output, and provider errors (24 backend tests total). No test calls OpenRouter live.
 
 **Success criteria:** Each AI request receives the current board and session context; valid optional operations persist only for the authenticated user; invalid output cannot corrupt the board; chat history is not persisted.
 
 ## Part 10: AI Chat Sidebar and End-to-End Workflow
 
-- [ ] Add a responsive AI chat sidebar to the existing board interface, with message history for the active page session and pending/error states.
-- [ ] Submit user questions and transient history to the backend AI route.
-- [ ] Render assistant text and apply any returned board update to the visible board automatically.
-- [ ] Clear chat history on logout and page reload; keep the board and chat usable when the provider is unavailable.
+- [x] Add a responsive AI chat sidebar to the existing board interface, with message history for the active page session and pending/error states.
+- [x] Submit user questions and transient history to the backend AI route.
+- [x] Review structured AI-proposed changes and apply them to the visible board only after explicit user approval.
+- [x] Clear chat history on logout and page reload; keep the board and chat usable when the provider is unavailable.
 - [ ] Complete accessibility and responsive checks for the board and sidebar.
 
-**Tests:** Frontend unit tests for chat rendering, submission, errors, history clearing, and applying returned board data; Playwright tests for a mocked assistant response with and without a board update, reload/logout history clearing, and provider failure. Run the full frontend suite and backend suite.
+**Tests:**
 
-**Success criteria:** A signed-in user can chat with the assistant; responses appear in the sidebar; valid board updates become visible and persist without a manual refresh; transient history is discarded at the defined session boundaries.
+- [x] Frontend unit tests cover chat rendering, submission, errors, history continuity, applying approved board data, discarding proposals, logout errors, and externally updated column titles (16 tests total across the suite).
+- [ ] Playwright tests cover mocked assistant proposals, approval, reload/logout history clearing, and provider failure; execution requires Docker Desktop's Linux engine.
+- [ ] Run the backend suite; `uv` and `pytest` are not installed in the current environment.
+
+**Success criteria:** Implemented: a signed-in user can chat with the assistant; responses appear in the sidebar; proposed board updates are reviewed and become visible/persistent after approval; transient history is discarded at the defined session boundaries. Browser-level and accessibility verification remain open.
+
+## Part 11: Deployment Readiness
+
+- [x] Accept the hosting platform's `PORT` and run the container as a non-root user.
+- [x] Require production session and login secrets; use secure session cookies in production.
+- [x] Limit authenticated AI calls to reduce accidental or abusive provider spend.
+- [x] Bind local Compose to loopback by default and document required secrets, writable persistent storage, and HTTPS.
+- [x] Select OCI Always Free to preserve SQLite on persistent boot storage; document its current resource limits and idle-instance reclamation caveat.
+- [x] Add a production Compose stack with Caddy-managed HTTPS and a private app container.
+- [ ] Create the OCI account, provision the VM, configure a hostname, and enter deployment secrets.
+- [ ] Build and smoke-test the production container on the provisioned VM.
+
+**Tests:** Frontend unit tests (16) and lint pass; Python syntax compilation passes. Docker image build, backend tests (30 currently defined), and platform smoke tests remain unverified because Docker Desktop's engine is stopped and `uv`/`pytest` are unavailable.
+
+**Success criteria:** The OCI deployment configuration is ready and preserves SQLite at `/data`. Live deployment awaits account/VM/domain setup by the account owner; Always Free availability, idle-reclamation policy, and resource limits apply.
 
 ## Approval Gates
 
