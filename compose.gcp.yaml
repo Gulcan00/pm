@@ -1,0 +1,37 @@
+services:
+  app:
+    image: ${APP_IMAGE:-kanban-app:gcp}
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      PORT: "8000"
+      DATABASE_PATH: /data/kanban.sqlite3
+      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET in the server .env file}
+      MVP_PASSWORD: ${MVP_PASSWORD:?Set MVP_PASSWORD in the server .env file}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+    volumes:
+      - kanban-data:/data
+    expose:
+      - "8000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in the server .env file}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  kanban-data:
+  caddy-data:
+  caddy-config:

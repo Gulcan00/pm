@@ -51,6 +51,36 @@ def test_expired_session_cookie_is_rejected(client) -> None:
     assert client.get("/api/auth/me").status_code == 401
 
 
+def test_session_with_non_numeric_user_id_is_rejected(client) -> None:
+    signed_value = f"invalid-user-id.{int(time.time()) + SESSION_TTL_SECONDS}"
+    signature = hmac.new(
+        b"test-session-secret", signed_value.encode(), hashlib.sha256
+    ).hexdigest()
+    client.cookies.set(SESSION_COOKIE, f"{signed_value}.{signature}")
+
+    assert client.get("/api/auth/me").status_code == 401
+
+
+def test_database_url_selects_postgres_without_treating_local_paths_as_urls(
+    tmp_path, monkeypatch
+) -> None:
+    initialized_targets = []
+    monkeypatch.setattr("app.main.initialize_database", initialized_targets.append)
+    monkeypatch.setenv("DATABASE_URL", "postgres://example")
+
+    postgres_app = create_app(static_dir=tmp_path / "static")
+
+    assert postgres_app.state.database_path == "postgres://example"
+    assert initialized_targets == ["postgres://example"]
+
+    monkeypatch.delenv("DATABASE_URL")
+    local_app = create_app(static_dir=tmp_path / "static")
+
+    assert isinstance(local_app.state.database_path, type(tmp_path))
+    assert local_app.state.database_path.name == "kanban.sqlite3"
+    assert isinstance(initialized_targets[1], type(tmp_path))
+
+
 def test_production_requires_secrets_and_sets_secure_cookie(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.delenv("SESSION_SECRET", raising=False)

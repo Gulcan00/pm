@@ -28,12 +28,6 @@ To explicitly check OpenRouter connectivity, run `docker compose exec app python
 
 ## Deploy
 
-Deploy the repository as a Docker image on a platform that supports persistent writable storage. Configure `APP_ENV=production`, `PORT` to the port supplied by the platform, `SESSION_SECRET` to a unique random value of at least 32 characters, `MVP_PASSWORD` to a unique password of at least 12 characters, and `OPENROUTER_API_KEY` if AI requests should be enabled. Keep these values in the platform's secret settings, not in the image or source control.
+The selected hosted setup is a Render Free Docker web service with Supabase Free PostgreSQL. Follow [docs/DEPLOY-RENDER.md](docs/DEPLOY-RENDER.md) to configure the Render Blueprint and database. The repository does not create cloud resources or migrate local SQLite data. Free-tier inactivity and storage limits apply; this is not a production-availability guarantee.
 
-Generate a session secret locally with `openssl rand -hex 32` (macOS/Linux) or `[Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))` (PowerShell), then add it directly to the platform's secret settings.
-
-Mount persistent storage at `/data` and keep `DATABASE_PATH=/data/kanban.sqlite3`. The app runs as UID 10001, so the mounted directory must be writable by that user. Free services with ephemeral filesystems are not suitable for persistent boards; their restarts or redeploys can erase the SQLite database. Check the platform's current storage and inactivity policies before deploying. Use HTTPS so the production session cookie is sent by browsers.
-
-For local production-mode checks, set the same environment variables in the project-root `.env` before running Compose. Compose remains bound to `127.0.0.1` unless `APP_BIND` is explicitly changed.
-
-For a free OCI VM deployment that preserves SQLite, see [docs/DEPLOY-OCI.md](docs/DEPLOY-OCI.md). It includes a separate Compose stack with Caddy-managed HTTPS; cloud account, VM, and DNS provisioning are manual.
+Local Docker Compose continues to use SQLite. Keep production secrets in the provider's secret settings, never in the repository or image.

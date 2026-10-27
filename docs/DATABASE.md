@@ -1,8 +1,8 @@
-# SQLite Database Proposal
+# Database Design
 
 ## Scope
 
-SQLite remains the local persistent store. The existing `users` table and seeded `user` identity remain; the plaintext MVP password is not stored. The proposed schema adds one board per user, five fixed columns per board, and cards ordered within columns. The JSON representation is in [schema-proposal.json](schema-proposal.json).
+SQLite is the local default. Hosted deployments can use PostgreSQL by setting `DATABASE_URL`; the schema is initialized automatically on startup for either database. Both use the same users, boards, fixed columns, and cards model. The plaintext MVP password is not stored. The JSON representation is in [schema-proposal.json](schema-proposal.json).
 
 AI conversation history is not part of the database or schema. It exists only in the active browser session and is discarded on reload or logout.
 
@@ -23,9 +23,9 @@ Enable `PRAGMA foreign_keys = ON` on every SQLite connection. The JSON Schema de
 
 ## Creation and Migrations
 
-Keep the database path configurable through `DATABASE_PATH`; Docker's existing named volume preserves the file across container restarts. On startup, create the parent directory if needed, open the database, enable foreign keys, and apply pending migrations in a transaction. Use SQLite `PRAGMA user_version` as the migration version. The initial migration preserves or creates the existing users table and idempotently seeds `user`; the next migration creates board tables, then creates one board and the five fixed columns for each existing user. Normal restarts must not replace existing rows or reset card data. Future schema changes add numbered migrations; an unknown newer schema version should fail startup rather than be silently altered.
+SQLite uses `DATABASE_PATH` and `PRAGMA user_version`; PostgreSQL uses `DATABASE_URL` and an `app_schema_version` table. PostgreSQL URLs beginning with `postgres://` are accepted. Startup creates missing tables and seeds the MVP user, board, and fixed columns without replacing existing card data. Writes use transactions, and PostgreSQL writes are serialized with a transaction-scoped advisory lock. An unknown newer schema version fails startup rather than being silently altered. Future schema changes must add matching migrations for both database backends.
 
-Create each board with the five fixed columns and no cards. The eight frontend example cards remain demo data and are not copied into SQLite. This empty-board seed behavior was approved with the schema proposal.
+The hosted PostgreSQL database is initialized as a new empty board; local SQLite data is not automatically copied or migrated. No export/import tool is currently provided. The eight frontend example cards remain demo data and are not copied into either database. This empty-board seed behavior was approved with the schema proposal.
 
 ## Review Gate
 

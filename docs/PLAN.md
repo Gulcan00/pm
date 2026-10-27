@@ -2,7 +2,7 @@
 
 ## Decisions and Constraints
 
-- The app is a local Dockerized MVP: Next.js frontend, Python FastAPI backend, SQLite database, and OpenRouter for AI requests.
+- The app is a local Dockerized MVP: Next.js frontend, Python FastAPI backend, SQLite database, and OpenRouter for AI requests. Local development defaults to SQLite; hosted deployment uses PostgreSQL selected through `DATABASE_URL`.
 - FastAPI serves the statically built Next.js app at `/` and provides the API.
 - The MVP login credentials are `user` and `password`. SQLite has a seeded user record so board ownership is represented in the data model; do not store the plaintext password in SQLite.
 - AI conversation history is transient for the active chat session. Keep it out of SQLite and discard it when the chat session ends, the user logs out, or the page is reloaded.
@@ -157,15 +157,17 @@
 - [x] Accept the hosting platform's `PORT` and run the container as a non-root user.
 - [x] Require production session and login secrets; use secure session cookies in production.
 - [x] Limit authenticated AI calls to reduce accidental or abusive provider spend.
-- [x] Bind local Compose to loopback by default and document required secrets, writable persistent storage, and HTTPS.
-- [x] Select OCI Always Free to preserve SQLite on persistent boot storage; document its current resource limits and idle-instance reclamation caveat.
-- [x] Add a production Compose stack with Caddy-managed HTTPS and a private app container.
-- [ ] Create the OCI account, provision the VM, configure a hostname, and enter deployment secrets.
-- [ ] Build and smoke-test the production container on the provisioned VM.
+- [x] Bind local Compose to loopback by default and document local production-mode secrets.
+- [x] Select Render Free with Supabase Free PostgreSQL; keep SQLite as the local default and initialize PostgreSQL from `DATABASE_URL`.
+- [x] Add a Render Blueprint for a Docker web service with generated session secret, required external database and login password, and health check.
+- [x] Document the Supabase Session pooler, ephemeral Render filesystem, provider inactivity limits, and local-data migration limitation.
+- [ ] Address missing login attempt throttling before public exposure.
+- [ ] Create the Supabase project, configure Render secrets, and deploy the service.
+- [ ] Smoke-test the live service and verify persisted board changes across a Render redeploy.
 
-**Tests:** Frontend unit tests (16) and lint pass; Python syntax compilation passes. Docker image build, backend tests (30 currently defined), and platform smoke tests remain unverified because Docker Desktop's engine is stopped and `uv`/`pytest` are unavailable.
+**Tests:** Backend suite and database-driver tests pass locally. Frontend unit tests and lint are verified separately. Live PostgreSQL, Render, and Supabase deployment checks remain pending because no cloud resources have been provisioned.
 
-**Success criteria:** The OCI deployment configuration is ready and preserves SQLite at `/data`. Live deployment awaits account/VM/domain setup by the account owner; Always Free availability, idle-reclamation policy, and resource limits apply.
+**Success criteria:** The app runs against local SQLite by default and supports hosted PostgreSQL through `DATABASE_URL`; Render configuration and setup documentation are ready. Live deployment awaits account-owner setup, and free-tier inactivity/availability limits apply.
 
 ## Approval Gates
 
