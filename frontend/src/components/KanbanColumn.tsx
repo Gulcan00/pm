@@ -2,7 +2,7 @@ import { useState } from "react";
 import clsx from "clsx";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import type { Card, Column } from "@/lib/kanban";
+import type { Card, CardMetadata, Column } from "@/lib/kanban";
 import { KanbanCard } from "@/components/KanbanCard";
 import { NewCardForm } from "@/components/NewCardForm";
 
@@ -10,10 +10,12 @@ type KanbanColumnProps = {
   column: Column;
   cards: Card[];
   onRename: (columnId: string, title: string) => Promise<boolean>;
-  onAddCard: (columnId: string, title: string, details: string) => Promise<boolean>;
+  onAddCard: (columnId: string, title: string, details: string, metadata: CardMetadata) => Promise<boolean>;
   onDeleteCard: (columnId: string, cardId: string) => Promise<boolean>;
-  onEditCard: (cardId: string, title: string, details: string) => Promise<boolean>;
+  onEditCard: (cardId: string, title: string, details: string, metadata: CardMetadata) => Promise<boolean>;
   isSaving: boolean;
+  columns?: Column[];
+  onMoveCard?: (cardId: string, columnId: string) => Promise<boolean>;
 };
 
 export const KanbanColumn = ({
@@ -24,6 +26,8 @@ export const KanbanColumn = ({
   onDeleteCard,
   onEditCard,
   isSaving,
+  columns,
+  onMoveCard,
 }: KanbanColumnProps) => {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
   const [titleDraftState, setTitleDraftState] = useState({
@@ -52,7 +56,7 @@ export const KanbanColumn = ({
     <section
       ref={setNodeRef}
       className={clsx(
-        "flex min-h-[520px] flex-col rounded-3xl border border-[var(--stroke)] bg-[var(--surface-strong)] p-4 shadow-[var(--shadow)] transition",
+        "flex min-h-[540px] min-w-0 flex-col rounded-2xl border border-[var(--stroke)] bg-white/65 p-3 transition sm:p-4",
         isOver && "ring-2 ring-[var(--accent-yellow)]"
       )}
       data-testid={`column-${column.id}`}
@@ -60,9 +64,9 @@ export const KanbanColumn = ({
       <div className="flex items-start justify-between gap-3">
         <div className="w-full">
           <div className="flex items-center gap-3">
-            <div className="h-2 w-10 rounded-full bg-[var(--accent-yellow)]" />
-            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--gray-text)]">
-              {cards.length} cards
+            <div className="h-1.5 w-6 rounded-full bg-[var(--accent-yellow)]" />
+            <span className="text-xs font-semibold text-[var(--gray-text)]">
+              {cards.length} {cards.length === 1 ? "card" : "cards"}
             </span>
           </div>
           <input
@@ -83,7 +87,7 @@ export const KanbanColumn = ({
               }
             }}
             disabled={isSaving}
-            className="mt-3 w-full bg-transparent font-display text-lg font-semibold text-[var(--navy-dark)] outline-none"
+            className="mt-2 w-full min-w-0 rounded-md border border-transparent bg-transparent px-1 py-1 font-display text-lg font-semibold text-[var(--navy-dark)] transition hover:border-[var(--stroke)] focus:border-[var(--primary-blue)]"
             aria-label="Column title"
           />
         </div>
@@ -97,6 +101,10 @@ export const KanbanColumn = ({
               onDelete={(cardId) => onDeleteCard(column.id, cardId)}
               onEdit={onEditCard}
               isSaving={isSaving}
+              completed={column.id === "col-done"}
+              columnId={column.id}
+              columns={columns}
+              onMove={onMoveCard}
             />
           ))}
         </SortableContext>
@@ -107,7 +115,7 @@ export const KanbanColumn = ({
         )}
       </div>
       <NewCardForm
-        onAdd={(title, details) => onAddCard(column.id, title, details)}
+        onAdd={(title, details, metadata) => onAddCard(column.id, title, details, metadata)}
         isSaving={isSaving}
       />
     </section>

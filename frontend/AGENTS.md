@@ -5,11 +5,12 @@
 - This is a Next.js App Router application using React, TypeScript, and Tailwind CSS 4.
 - `next.config.ts` enables static export; `npm run build` writes the deployable site to `out/`. Docker builds this export and FastAPI serves it at `/`.
 - `src/app/page.tsx` renders the Kanban board. `src/app/layout.tsx` loads the global stylesheet, fonts, and page metadata.
-- `src/components/AuthGate.tsx` checks the FastAPI session and renders the login form or board. Authentication requests are same-origin; the signed session cookie is HttpOnly and managed by FastAPI.
+- `src/components/AuthGate.tsx` checks the FastAPI session and renders registration/login or `Workspace`. `Workspace.tsx` manages private boards and `AccountSettings.tsx` handles credential changes and deletion.
 - `src/components/KanbanBoard.tsx` owns the current board view state and loads/mutates it through the authenticated FastAPI API.
 - `KanbanColumn.tsx`, `KanbanCard.tsx`, `NewCardForm.tsx`, and `KanbanCardPreview.tsx` compose the board UI. Drag-and-drop uses `@dnd-kit`; card and column edits persist through the board API.
 - `src/lib/kanban.ts` defines board and AI operation types, sample board data, card ID generation, and the `moveCard` operation.
 - `AIChatSidebar.tsx` keeps chat history in component state for the active page session. AI-proposed operations are reviewed and only applied after explicit user approval; history is discarded on reload or logout.
+- Boards remount on selection changes, clearing assistant history/proposals and unsaved task drafts. Card priority/dates, search, progress, and accessible stage selectors operate within the selected board.
 
 ## Conventions
 
@@ -24,8 +25,9 @@
 - `npm run dev`: run the Next.js development server.
 - `npm run lint`: lint the frontend.
 - `npm run test:unit`: run Vitest unit tests.
+- `npm run test:coverage`: enforce component/utility coverage thresholds.
 - `npm run test:e2e`: run Playwright browser tests.
 - `npm run test:all`: run unit and end-to-end tests.
 - `npm run build`: build the frontend.
 
-Playwright starts the Docker Compose app on `127.0.0.1:8000` as configured in `playwright.config.ts`; Docker and the Playwright Chromium browser are required. Vitest uses jsdom and loads `src/test/setup.ts` as configured in `vitest.config.ts`.
+Playwright normally starts Docker Compose on `127.0.0.1:8000`. `PLAYWRIGHT_LOCAL=1` instead serves the production export with the backend virtual environment on port 8017 and a disposable SQLite database. See `../docs/TESTING.md`. Vitest uses jsdom and loads `src/test/setup.ts`.

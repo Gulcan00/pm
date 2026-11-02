@@ -28,7 +28,7 @@ test("requires sign in and supports sign out", async ({ page }) => {
 
 test("loads the kanban board", async ({ page }) => {
   await signIn(page);
-  await expect(page.getByRole("heading", { name: "Kanban Studio" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "My project" })).toBeVisible();
   await expect(page.locator('[data-testid^="column-"]')).toHaveCount(5);
 });
 
@@ -133,14 +133,14 @@ test("AI chat applies board updates and clears history at session boundaries", a
       },
     },
   };
-  await page.route("**/api/ai/apply", async (route) => {
+  await page.route("**/api/boards/*/ai/apply", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify(assistantBoard),
     });
   });
-  await page.route("**/api/ai/chat", async (route) => {
+  await page.route("**/api/boards/*/ai/chat", async (route) => {
     const request = route.request().postDataJSON() as {
       question: string;
       history: unknown[];
@@ -208,7 +208,7 @@ test("AI chat applies board updates and clears history at session boundaries", a
 
 test("AI chat recovers from provider failure without losing the prompt", async ({ page }) => {
   let requestCount = 0;
-  await page.route("**/api/ai/chat", async (route) => {
+  await page.route("**/api/boards/*/ai/chat", async (route) => {
     requestCount += 1;
     if (requestCount === 1) {
       await route.fulfill({
@@ -221,7 +221,7 @@ test("AI chat recovers from provider failure without losing the prompt", async (
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ assistant_text: "Recovered." }),
+      body: JSON.stringify({ assistant_text: "Recovered.", operations: [] }),
     });
   });
 

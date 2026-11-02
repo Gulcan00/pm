@@ -38,6 +38,47 @@ afterEach(() => {
 });
 
 describe("KanbanBoard", () => {
+  it("filters by title, details and priority without changing the saved board", async () => {
+    mockFetch.mockResolvedValue(boardResponse({
+      ...initialData,
+      cards: { ...initialData.cards, "card-1": { ...initialData.cards["card-1"], priority: "urgent", dueDate: "2020-01-01" } },
+    }));
+    render(<KanbanBoard boardId={4} />);
+    await screen.findByText("Align roadmap themes");
+    await userEvent.type(screen.getByLabelText("Search cards"), "quarterly");
+    expect(screen.getByText("Align roadmap themes")).toBeInTheDocument();
+    expect(screen.queryByText("Gather customer signals")).not.toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText("Filter priority"), "low");
+    expect(screen.queryByText("Align roadmap themes")).not.toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText("Filter priority"), "urgent");
+    expect(screen.getByText("Align roadmap themes")).toBeInTheDocument();
+    expect(screen.getByText(/1 matching cards/)).toBeInTheDocument();
+    expect(mockFetch).toHaveBeenCalledOnce();
+    expect(mockFetch).toHaveBeenCalledWith("/api/boards/4", expect.any(Object));
+  });
+
+  it("persists task edits through the selected board", async () => {
+    const board = boardWithCard("task", "Task", "Details", "col-backlog");
+    mockFetch.mockResolvedValue(boardResponse(board));
+    render(<KanbanBoard boardId={4} />);
+    await userEvent.click(await screen.findByRole("button", { name: "Edit Task" }));
+    await userEvent.selectOptions(screen.getByLabelText("Priority"), "high");
+    await userEvent.type(screen.getByLabelText("Due date"), "2026-12-31");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(mockFetch).toHaveBeenLastCalledWith("/api/boards/4/cards/task", expect.objectContaining({
+      method: "PATCH", body: JSON.stringify({ title: "Task", details: "Details", priority: "high", dueDate: "2026-12-31" }),
+    }));
+  });
+
+  it("moves a task using the keyboard-accessible stage selector", async () => {
+    const board = boardWithCard("task", "Task", "Details", "col-backlog");
+    mockFetch.mockResolvedValue(boardResponse(board));
+    render(<KanbanBoard boardId={4} />);
+    await userEvent.selectOptions(await screen.findByLabelText("Move Task to"), "col-done");
+    expect(mockFetch).toHaveBeenLastCalledWith("/api/boards/4/cards/task/move", expect.objectContaining({
+      method: "POST", body: JSON.stringify({ columnId: "col-done", position: 0 }),
+    }));
+  });
   it("loads and renders five columns", async () => {
     render(<KanbanBoard />);
     expect(await screen.findAllByTestId(/column-/i)).toHaveLength(5);

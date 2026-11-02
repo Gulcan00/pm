@@ -1,23 +1,27 @@
 import { useState, type FormEvent } from "react";
+import { CardMetadataFields } from "@/components/CardMetadataFields";
+import type { CardMetadata } from "@/lib/kanban";
 
 const initialFormState = { title: "", details: "" };
 
 type NewCardFormProps = {
-  onAdd: (title: string, details: string) => Promise<boolean>;
+  onAdd: (title: string, details: string, metadata: CardMetadata) => Promise<boolean>;
   isSaving: boolean;
 };
 
 export const NewCardForm = ({ onAdd, isSaving }: NewCardFormProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [formState, setFormState] = useState(initialFormState);
+  const [metadata, setMetadata] = useState<CardMetadata>({ priority: "medium", dueDate: null });
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!formState.title.trim()) {
       return;
     }
-    if (await onAdd(formState.title.trim(), formState.details.trim())) {
+    if (await onAdd(formState.title.trim(), formState.details.trim(), metadata)) {
       setFormState(initialFormState);
+      setMetadata({ priority: "medium", dueDate: null });
       setIsOpen(false);
     }
   };
@@ -34,6 +38,7 @@ export const NewCardForm = ({ onAdd, isSaving }: NewCardFormProps) => {
             placeholder="Card title"
             className="w-full rounded-xl border border-[var(--stroke)] bg-white px-3 py-2 text-sm font-medium text-[var(--navy-dark)] outline-none transition focus:border-[var(--primary-blue)]"
             required
+            maxLength={200}
           />
           <textarea
             value={formState.details}
@@ -42,8 +47,10 @@ export const NewCardForm = ({ onAdd, isSaving }: NewCardFormProps) => {
             }
             placeholder="Details"
             rows={3}
+            maxLength={5000}
             className="w-full resize-none rounded-xl border border-[var(--stroke)] bg-white px-3 py-2 text-sm text-[var(--gray-text)] outline-none transition focus:border-[var(--primary-blue)]"
           />
+          <CardMetadataFields value={metadata} onChange={setMetadata} />
           <div className="flex items-center gap-2">
             <button
               type="submit"
@@ -58,6 +65,7 @@ export const NewCardForm = ({ onAdd, isSaving }: NewCardFormProps) => {
               onClick={() => {
                 setIsOpen(false);
                 setFormState(initialFormState);
+                setMetadata({ priority: "medium", dueDate: null });
               }}
               className="rounded-full border border-[var(--stroke)] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--gray-text)] transition hover:text-[var(--navy-dark)]"
             >

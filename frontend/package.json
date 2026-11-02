@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:unit": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:unit:watch": "vitest",
     "test:e2e": "playwright test",
     "test:all": "npm run test:unit && npm run test:e2e"

@@ -4,9 +4,10 @@
 
 - `app/main.py` defines the FastAPI application.
 - `/` serves the static Next.js export from `STATIC_DIR` when the export directory exists. The local default is `frontend/out`; Docker sets it to `/app/static`.
-- `POST /api/auth/login`, `GET /api/auth/me`, and `POST /api/auth/logout` handle the MVP user session. A signed HttpOnly cookie identifies the user; SQLite seeds the `user` username and never stores the password.
+- `/api/auth/*` handles registration, login, identity, logout, password changes, and confirmed account deletion. Passwords use salted scrypt hashes; signed HttpOnly sessions are revocable.
+- `/api/boards` lists/creates private boards. Nested board, column, card, and assistant routes require authenticated ownership. SQLite/PostgreSQL migrations preserve existing data.
 - `GET /api/health` returns a health status; `GET /api/hello` returns a sample API response.
-- `tests/test_main.py` covers authentication, user seeding, and API routes with FastAPI's test client and temporary SQLite databases.
+- Tests cover authentication, migrations, board workflows and isolation with temporary SQLite databases; `TEST_DATABASE_URL` enables disposable-schema PostgreSQL integration. Pytest enforces coverage; see `../docs/TESTING.md`.
 - `pyproject.toml` declares runtime and development dependencies; `uv.lock` pins their resolved versions.
 - The root `Dockerfile` builds the frontend static export in a Node stage, installs locked Python runtime dependencies with `uv`, and starts Uvicorn. `compose.yaml` publishes port 8000 by default.
 

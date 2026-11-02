@@ -14,14 +14,20 @@ import {
 import { KanbanColumn } from "@/components/KanbanColumn";
 import { KanbanCardPreview } from "@/components/KanbanCardPreview";
 import { AIChatSidebar } from "@/components/AIChatSidebar";
-import { moveCard, type BoardData } from "@/lib/kanban";
+import { moveCard, matchesCard, isOverdue, type BoardData, type CardMetadata } from "@/lib/kanban";
 
 export const KanbanBoard = ({
   onLogout,
   logoutError,
+  boardId,
+  boardName,
+  boardDescription,
 }: {
   onLogout?: () => void;
   logoutError?: string;
+  boardId?: number;
+  boardName?: string;
+  boardDescription?: string;
 }) => {
   const [board, setBoard] = useState<BoardData | null>(null);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
@@ -30,13 +36,16 @@ export const KanbanBoard = ({
   const [saveError, setSaveError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState("all");
+  const apiBase = boardId ? `/api/boards/${boardId}` : "/api/board";
 
   useEffect(() => {
     let active = true;
     setBoard(null);
     setLoadError("");
 
-    fetch("/api/board", {
+    fetch(apiBase, {
       credentials: "same-origin",
       cache: "no-store",
     })
@@ -58,7 +67,7 @@ export const KanbanBoard = ({
     return () => {
       active = false;
     };
-  }, [loadAttempt]);
+  }, [loadAttempt, apiBase]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -108,7 +117,7 @@ export const KanbanBoard = ({
     const { active, over } = event;
     setActiveCardId(null);
 
-    if (!board || isSaving || !over || active.id === over.id) {
+    if (!board || isSaving || search.trim() || priorityFilter !== "all" || !over || active.id === over.id) {
       return;
     }
 
@@ -118,7 +127,7 @@ export const KanbanBoard = ({
     if (!destination) {
       return;
     }
-    void persistBoard(`/api/board/cards/${cardId}/move`, {
+    void persistBoard(`${apiBase}/cards/${cardId}/move`, {
       method: "POST",
       body: JSON.stringify({
         columnId: destination.id,
@@ -131,33 +140,37 @@ export const KanbanBoard = ({
     if (board?.columns.find((column) => column.id === columnId)?.title === title) {
       return Promise.resolve(true);
     }
-    return persistBoard(`/api/board/columns/${columnId}`, {
+    return persistBoard(`${apiBase}/columns/${columnId}`, {
       method: "PATCH",
       body: JSON.stringify({ title }),
     });
   };
 
-  const handleAddCard = (columnId: string, title: string, details: string) => {
-    return persistBoard("/api/board/cards", {
+  const handleAddCard = (columnId: string, title: string, details: string, metadata: CardMetadata) => {
+    return persistBoard(`${apiBase}/cards`, {
       method: "POST",
-      body: JSON.stringify({ columnId, title, details }),
+      body: JSON.stringify({ columnId, title, details, ...metadata }),
     });
   };
 
   const handleDeleteCard = (columnId: string, cardId: string) => {
     void columnId;
-    return persistBoard(`/api/board/cards/${cardId}`, {
+    return persistBoard(`${apiBase}/cards/${cardId}`, {
       method: "DELETE",
     });
   };
 
-  const handleEditCard = (cardId: string, title: string, details: string) =>
-    persistBoard(`/api/board/cards/${cardId}`, {
+  const handleEditCard = (cardId: string, title: string, details: string, metadata: CardMetadata) =>
+    persistBoard(`${apiBase}/cards/${cardId}`, {
       method: "PATCH",
-      body: JSON.stringify({ title, details }),
+      body: JSON.stringify({ title, details, ...metadata }),
     });
 
   const activeCard = activeCardId ? cardsById[activeCardId] : null;
+  const cards = Object.values(cardsById);
+  const completedIds = new Set(board?.columns.find((column) => column.id === "col-done")?.cardIds);
+  const overdueCount = cards.filter((card) => !completedIds.has(card.id) && isOverdue(card.dueDate, new Date().toLocaleDateString("en-CA"))).length;
+  const matchingCount = cards.filter((card) => matchesCard(card, search, priorityFilter)).length;
 
   if (!board) {
     return (
@@ -189,65 +202,63 @@ export const KanbanBoard = ({
       <div className="pointer-events-none absolute left-0 top-0 h-[420px] w-[420px] -translate-x-1/3 -translate-y-1/3 rounded-full bg-[radial-gradient(circle,_rgba(32,157,215,0.25)_0%,_rgba(32,157,215,0.05)_55%,_transparent_70%)]" />
       <div className="pointer-events-none absolute bottom-0 right-0 h-[520px] w-[520px] translate-x-1/4 translate-y-1/4 rounded-full bg-[radial-gradient(circle,_rgba(117,57,145,0.18)_0%,_rgba(117,57,145,0.05)_55%,_transparent_75%)]" />
 
-      <main className="relative mx-auto flex min-h-screen max-w-[1500px] flex-col gap-10 px-6 pb-16 pt-12">
+      <main className="relative flex min-h-screen w-full flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
         {logoutError && (
           <p role="alert" className="text-sm font-semibold text-red-700">
             {logoutError}
           </p>
         )}
-        <header className="flex flex-col gap-6 rounded-[32px] border border-[var(--stroke)] bg-white/80 p-8 shadow-[var(--shadow)] backdrop-blur">
-          <div className="flex flex-wrap items-start justify-between gap-6">
-            <div>
+        <header className="rounded-3xl border border-[var(--stroke)] bg-white/90 p-5 shadow-[var(--shadow)] sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-5">
+            <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-[0.35em] text-[var(--gray-text)]">
-                Single Board Kanban
+                Project workspace
               </p>
-              <h1 className="mt-3 font-display text-4xl font-semibold text-[var(--navy-dark)]">
-                Kanban Studio
+              <h1 className="mt-2 font-display text-3xl font-semibold text-[var(--navy-dark)] sm:text-4xl">
+                {boardName ?? board.name ?? "Kanban Studio"}
               </h1>
-              <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--gray-text)]">
-                Keep momentum visible. Rename columns, drag cards between stages,
-                and capture quick notes without getting buried in settings.
+              <p className="mt-2 text-sm leading-6 text-[var(--gray-text)]">
+                {boardDescription || board.description || "Keep momentum visible. Drag cards to move work forward."}
               </p>
             </div>
-            <div className="rounded-2xl border border-[var(--stroke)] bg-[var(--surface)] px-5 py-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[var(--gray-text)]">
-                Focus
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="mr-2 text-sm text-[var(--gray-text)]">
+                <span className="font-semibold text-[var(--navy-dark)]">{Object.keys(board.cards).length}</span>{" "}
+                {Object.keys(board.cards).length === 1 ? "card" : "cards"}
+                <span aria-hidden="true" className="mx-2 text-[var(--accent-yellow)]">/</span>
+                {board.columns.length} stages
               </p>
-              <p className="mt-2 text-lg font-semibold text-[var(--primary-blue)]">
-                One board. Five columns. Zero clutter.
-              </p>
-            </div>
-            {onLogout && (
+              {onLogout && (
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="rounded-lg border border-(--stroke) px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-background"
+                >
+                  Sign out
+                </button>
+              )}
               <button
                 type="button"
-                onClick={onLogout}
-                className="rounded-lg border border-(--stroke) px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-background"
+                aria-controls="ai-chat-sidebar"
+                aria-expanded={isChatOpen}
+                onClick={() => setIsChatOpen((open) => !open)}
+                className="rounded-lg bg-[var(--secondary-purple)] px-4 py-3 text-sm font-semibold text-white transition hover:brightness-110"
               >
-                Sign out
+                {isChatOpen ? "Close assistant" : "AI assistant"}
               </button>
-            )}
-            <button
-              type="button"
-              aria-controls="ai-chat-sidebar"
-              aria-expanded={isChatOpen}
-              onClick={() => setIsChatOpen((open) => !open)}
-              className="rounded-lg border border-[var(--stroke)] px-4 py-3 text-sm font-semibold text-[var(--navy-dark)] transition hover:bg-[var(--surface)]"
-            >
-              {isChatOpen ? "Close assistant" : "AI assistant"}
-            </button>
-          </div>
-          <div className="flex flex-wrap items-center gap-4">
-            {board.columns.map((column) => (
-              <div
-                key={column.id}
-                className="flex items-center gap-2 rounded-full border border-[var(--stroke)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--navy-dark)]"
-              >
-                <span className="h-2 w-2 rounded-full bg-[var(--accent-yellow)]" />
-                {column.title}
-              </div>
-            ))}
+            </div>
           </div>
         </header>
+        <section aria-label="Project overview" className="flex flex-wrap items-center gap-5 rounded-2xl border border-[var(--stroke)] bg-white p-4 text-sm">
+          <p><strong>{completedIds.size} / {cards.length}</strong> completed</p>
+          <progress aria-label="Project completion" value={completedIds.size} max={cards.length || 1} className="max-w-40 accent-[var(--secondary-purple)]" />
+          <p><strong>{overdueCount}</strong> overdue</p>
+          <label className="flex items-center gap-2">Search cards<input type="search" className="workspace-input w-48" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Title or details" /></label>
+          <label className="flex items-center gap-2">Filter priority<select className="workspace-input" value={priorityFilter} onChange={(event) => setPriorityFilter(event.target.value)}>
+            <option value="all">All priorities</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="urgent">Urgent</option>
+          </select></label>
+          {(search || priorityFilter !== "all") && <p role="status">{matchingCount} matching cards. Clear filters to drag cards.</p>}
+        </section>
 
         {saveError && (
           <p role="alert" className="text-sm font-semibold text-red-700">
@@ -263,8 +274,8 @@ export const KanbanBoard = ({
         <div
           className={
             isChatOpen
-              ? "grid items-start gap-6 2xl:grid-cols-[minmax(0,1fr)_360px]"
-              : "grid items-start gap-6"
+              ? "board-workspace board-workspace-with-chat"
+              : "board-workspace"
           }
         >
           <DndContext
@@ -273,19 +284,30 @@ export const KanbanBoard = ({
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-            <section className="order-last grid gap-6 lg:grid-cols-5 2xl:order-first">
-              {board.columns.map((column) => (
-                <KanbanColumn
-                  key={column.id}
-                  column={column}
-                  cards={column.cardIds.map((cardId) => board.cards[cardId])}
-                  onRename={handleRenameColumn}
-                  onAddCard={handleAddCard}
-                  onDeleteCard={handleDeleteCard}
-                  onEditCard={handleEditCard}
-                  isSaving={isSaving}
-                />
-              ))}
+            <section
+              aria-label="Kanban board"
+              tabIndex={0}
+              className="kanban-scroll"
+            >
+              <div className="kanban-columns">
+                {board.columns.map((column) => (
+                  <KanbanColumn
+                    key={column.id}
+                    column={column}
+                    cards={column.cardIds.map((cardId) => board.cards[cardId]).filter((card) => matchesCard(card, search, priorityFilter))}
+                    onRename={handleRenameColumn}
+                    onAddCard={handleAddCard}
+                    onDeleteCard={handleDeleteCard}
+                    onEditCard={handleEditCard}
+                    isSaving={isSaving}
+                    columns={board.columns}
+                    onMoveCard={(cardId, columnId) => persistBoard(`${apiBase}/cards/${cardId}/move`, {
+                      method: "POST",
+                      body: JSON.stringify({ columnId, position: board.columns.find((item) => item.id === columnId)?.cardIds.length ?? 0 }),
+                    })}
+                  />
+                ))}
+              </div>
             </section>
             <DragOverlay>
               {activeCard ? (
@@ -300,6 +322,7 @@ export const KanbanBoard = ({
             board={board}
             onClose={() => setIsChatOpen(false)}
             onBoardChange={setBoard}
+            boardId={boardId}
           />
         </div>
       </main>

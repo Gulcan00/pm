@@ -32,3 +32,121 @@ body {
 .font-display {
   font-family: var(--font-display), "Segoe UI", sans-serif;
 }
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+:where(button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--primary-blue);
+  outline-offset: 3px;
+}
+
+.workspace-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  background: white;
+  border-bottom: 1px solid var(--stroke);
+}
+
+.workspace-button {
+  border: 1px solid var(--stroke);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.workspace-button:disabled { opacity: 0.5; }
+.workspace-button:hover:not(:disabled) { background: var(--surface); }
+
+.workspace-input {
+  min-width: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.375rem;
+  padding: 0.5rem;
+  background: white;
+  color: var(--navy-dark);
+}
+
+.workspace-panel {
+  display: grid;
+  gap: 1rem;
+  max-width: 36rem;
+  margin: 1.5rem;
+  padding: 1.5rem;
+  background: white;
+  border: 1px solid var(--stroke);
+  border-radius: 1rem;
+}
+
+.priority-badge { border-radius: 0.25rem; padding: 0.125rem 0.5rem; text-transform: capitalize; }
+.priority-low { background: #f1f5f9; color: #475569; }
+.priority-medium { background: #e0f2fe; color: #075985; }
+.priority-high { background: #fef3c7; color: #92400e; }
+.priority-urgent { background: #fee2e2; color: #991b1b; }
+
+.board-workspace {
+  display: grid;
+  min-width: 0;
+  align-items: start;
+  gap: 1.5rem;
+}
+
+.kanban-scroll {
+  min-width: 0;
+  overflow-x: auto;
+  padding-bottom: 1rem;
+  border-radius: 1rem;
+  scrollbar-color: var(--primary-blue) var(--surface);
+}
+
+.kanban-columns {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(260px, 1fr);
+  align-items: stretch;
+  gap: 1rem;
+}
+
+.card-action {
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  color: #64748b;
+  transition: color 150ms, background-color 150ms;
+}
+
+.card-action:disabled {
+  opacity: 0.5;
+}
+
+.ai-chat-panel {
+  grid-row: 1;
+}
+
+.ai-chat-panel[hidden] {
+  display: none;
+}
+
+@media (min-width: 1200px) {
+  .board-workspace-with-chat {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+
+  .ai-chat-panel {
+    grid-row: auto;
+    position: sticky;
+    top: 1.5rem;
+  }
+}

@@ -27,6 +27,32 @@ afterEach(() => {
 });
 
 describe("AIChatSidebar", () => {
+  it("scopes chat and approvals to the selected board and retains failed proposals", async () => {
+    mockFetch.mockResolvedValueOnce(boardResponse({
+      assistant_text: "Proposed changes.",
+      operations: [
+        { type: "update_card", card_id: "missing", title: "Updated", details: "New notes", priority: "urgent", due_date: null },
+        { type: "move_card", card_id: "missing", column_id: "col-done", position: 0 },
+        { type: "rename_column", column_id: "missing", title: "Ideas" },
+      ],
+    })).mockResolvedValueOnce(boardResponse({ detail: "Unable to apply" }, false))
+      .mockResolvedValueOnce(boardResponse(emptyBoard));
+    const user = userEvent.setup();
+    render(<AIChatSidebar isOpen board={emptyBoard} boardId={7} onClose={onClose} onBoardChange={onBoardChange} />);
+    await user.type(screen.getByLabelText("Message"), "Change this board");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    expect(await screen.findByText(/priority urgent; due date cleared/)).toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: "Apply changes" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Unable to apply");
+    expect(screen.getByRole("button", { name: "Apply changes" })).toBeInTheDocument();
+    expect(onBoardChange).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Apply changes" }));
+    expect(await screen.findByText("Changes applied.")).toBeInTheDocument();
+    expect(mockFetch.mock.calls[0][0]).toBe("/api/boards/7/ai/chat");
+    expect(mockFetch.mock.calls[1][0]).toBe("/api/boards/7/ai/apply");
+    await user.click(screen.getByRole("button", { name: "Close", exact: true }));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
   it("sends transient history and applies proposed changes only after approval", async () => {
     const boardWithCard: BoardData = {
       columns: emptyBoard.columns.map((column, index) =>

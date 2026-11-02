@@ -2,6 +2,18 @@ export type Card = {
   id: string;
   title: string;
   details: string;
+  priority?: Priority;
+  dueDate?: string | null;
+};
+
+export type Priority = "low" | "medium" | "high" | "urgent";
+export type CardMetadata = { priority: Priority; dueDate: string | null };
+export type BoardSummary = {
+  id: number;
+  name: string;
+  description: string;
+  cardCount: number;
+  completedCount: number;
 };
 
 export type Column = {
@@ -11,13 +23,16 @@ export type Column = {
 };
 
 export type BoardData = {
+  id?: number;
+  name?: string;
+  description?: string;
   columns: Column[];
   cards: Record<string, Card>;
 };
 
 export type BoardOperation =
-  | { type: "create_card"; column_id: string; title: string; details?: string }
-  | { type: "update_card"; card_id: string; title?: string; details?: string }
+  | { type: "create_card"; column_id: string; title: string; details?: string; priority?: Priority; due_date?: string | null }
+  | { type: "update_card"; card_id: string; title?: string; details?: string; priority?: Priority; due_date?: string | null }
   | { type: "move_card"; card_id: string; column_id: string; position: number }
   | { type: "delete_card"; card_id: string }
   | { type: "rename_column"; column_id: string; title: string };
@@ -173,3 +188,10 @@ export const createId = (prefix: string) => {
   const timePart = Date.now().toString(36);
   return `${prefix}-${randomPart}${timePart}`;
 };
+
+export const isOverdue = (dueDate: string | null | undefined, today: string) =>
+  Boolean(dueDate && dueDate < today);
+
+export const matchesCard = (card: Card, search: string, priority: string) =>
+  `${card.title} ${card.details}`.toLowerCase().includes(search.trim().toLowerCase()) &&
+  (priority === "all" || (card.priority ?? "medium") === priority);

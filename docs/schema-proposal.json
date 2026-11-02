@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Kanban persistence snapshot proposal",
-  "description": "Proposed JSON representation of persisted users, boards, columns, and cards. Relational constraints are enforced by SQLite as described in DATABASE.md.",
+  "title": "Workspace persistence snapshot",
+  "description": "Internal persisted users, boards, columns, and cards, not an account API response. Relational constraints are described in DATABASE.md.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "users", "boards", "columns", "cards"],
   "properties": {
-    "schema_version": { "const": 1 },
+    "schema_version": { "const": 4 },
     "users": {
       "type": "array",
       "items": { "$ref": "#/$defs/user" }
@@ -28,19 +28,23 @@
     "user": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "username"],
+      "required": ["id", "username", "password_hash", "session_version"],
       "properties": {
         "id": { "type": "integer", "minimum": 1 },
-        "username": { "type": "string", "minLength": 1 }
+        "username": { "type": "string", "minLength": 1 },
+        "password_hash": { "type": ["string", "null"] },
+        "session_version": { "type": "integer", "minimum": 0 }
       }
     },
     "board": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "user_id"],
+      "required": ["id", "user_id", "name", "description"],
       "properties": {
         "id": { "type": "integer", "minimum": 1 },
-        "user_id": { "type": "integer", "minimum": 1 }
+        "user_id": { "type": "integer", "minimum": 1 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "description": { "type": "string", "maxLength": 2000 }
       }
     },
     "column": {
@@ -107,7 +111,7 @@
     "card": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "board_id", "column_id", "title", "details", "position"],
+      "required": ["id", "board_id", "column_id", "title", "details", "position", "priority", "due_date"],
       "properties": {
         "id": { "type": "string", "minLength": 1 },
         "board_id": { "type": "integer", "minimum": 1 },
@@ -123,7 +127,9 @@
         },
         "title": { "type": "string", "minLength": 1 },
         "details": { "type": "string" },
-        "position": { "type": "integer", "minimum": 0 }
+        "position": { "type": "integer", "minimum": 0 },
+        "priority": { "enum": ["low", "medium", "high", "urgent"] },
+        "due_date": { "type": ["string", "null"], "format": "date" }
       }
     }
   }

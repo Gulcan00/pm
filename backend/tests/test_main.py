@@ -42,7 +42,7 @@ def test_login_seeds_user_and_creates_http_only_session(client) -> None:
 
 
 def test_expired_session_cookie_is_rejected(client) -> None:
-    signed_value = f"1.{int(time.time()) - 1}"
+    signed_value = f"1.0.{int(time.time()) - 1}"
     signature = hmac.new(
         b"test-session-secret", signed_value.encode(), hashlib.sha256
     ).hexdigest()
@@ -52,7 +52,7 @@ def test_expired_session_cookie_is_rejected(client) -> None:
 
 
 def test_session_with_non_numeric_user_id_is_rejected(client) -> None:
-    signed_value = f"invalid-user-id.{int(time.time()) + SESSION_TTL_SECONDS}"
+    signed_value = f"invalid-user-id.0.{int(time.time()) + SESSION_TTL_SECONDS}"
     signature = hmac.new(
         b"test-session-secret", signed_value.encode(), hashlib.sha256
     ).hexdigest()
@@ -131,8 +131,12 @@ def test_seeded_user_does_not_store_a_password(client) -> None:
         }
         user = connection.execute("SELECT username FROM users").fetchone()
 
-    assert columns == {"id", "username"}
+    assert columns == {"id", "username", "password_hash", "session_version"}
     assert user == ("user",)
+    with sqlite3.connect(database_path) as connection:
+        stored_hash = connection.execute("SELECT password_hash FROM users").fetchone()[0]
+    assert stored_hash.startswith("scrypt$")
+    assert "password" not in stored_hash
 
 
 def test_board_requires_authentication(client) -> None:
@@ -148,6 +152,9 @@ def test_first_run_creates_empty_board_with_fixed_columns(client) -> None:
 
     assert response.status_code == 200
     assert response.json() == {
+        "id": 1,
+        "name": "My project",
+        "description": "",
         "columns": [
             {"id": column_id, "title": title, "cardIds": []}
             for column_id, _, title, _ in COLUMN_DEFINITIONS
@@ -191,7 +198,7 @@ def test_migration_preserves_users_and_seeds_empty_boards(tmp_path) -> None:
     assert boards == [(7,), (12,)]
     assert columns_per_board == [(1, 5), (2, 5)]
     assert card_count == 0
-    assert schema_version == 2
+    assert schema_version == 4
 
 
 def test_card_crud_move_and_column_rename(client) -> None:
@@ -235,6 +242,8 @@ def test_card_crud_move_and_column_rename(client) -> None:
         "id": first_id,
         "title": "Updated",
         "details": "Changed",
+        "priority": "medium",
+        "dueDate": None,
     }
 
     deleted = client.delete(f"/api/board/cards/{second_id}").json()
@@ -368,7 +377,7 @@ def test_board_and_cards_are_isolated_by_authenticated_user(client) -> None:
         )
 
     other_client = TestClient(client.app)
-    signed_value = f"2.{int(time.time()) + SESSION_TTL_SECONDS}"
+    signed_value = f"2.0.{int(time.time()) + SESSION_TTL_SECONDS}"
     signature = hmac.new(
         b"test-session-secret", signed_value.encode(), hashlib.sha256
     ).hexdigest()
@@ -480,6 +489,8 @@ def test_ai_chat_requires_approval_before_applying_operations(client, monkeypatc
         "id": first_id,
         "title": "First",
         "details": "Old",
+        "priority": "medium",
+        "dueDate": None,
     }
 
     applied = client.post(
@@ -492,6 +503,8 @@ def test_ai_chat_requires_approval_before_applying_operations(client, monkeypatc
         "id": first_id,
         "title": "Updated first",
         "details": "New details",
+        "priority": "medium",
+        "dueDate": None,
     }
     assert second_id not in board["cards"]
     assert board["columns"][0]["title"] == "Ideas"
@@ -562,7 +575,7 @@ def test_ai_chat_cannot_mutate_another_users_card(client, monkeypatch) -> None:
             [(board_id, *column) for column in COLUMN_DEFINITIONS],
         )
     other_client = TestClient(client.app)
-    signed_value = f"2.{int(time.time()) + SESSION_TTL_SECONDS}"
+    signed_value = f"2.0.{int(time.time()) + SESSION_TTL_SECONDS}"
     signature = hmac.new(
         b"test-session-secret", signed_value.encode(), hashlib.sha256
     ).hexdigest()

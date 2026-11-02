@@ -4,10 +4,10 @@
 
 - The app is a local Dockerized MVP: Next.js frontend, Python FastAPI backend, SQLite database, and OpenRouter for AI requests. Local development defaults to SQLite; hosted deployment uses PostgreSQL selected through `DATABASE_URL`.
 - FastAPI serves the statically built Next.js app at `/` and provides the API.
-- The MVP login credentials are `user` and `password`. SQLite has a seeded user record so board ownership is represented in the data model; do not store the plaintext password in SQLite.
+- The initial development login is `user` / `password`. Accounts now support registration, hashed passwords, password changes, and confirmed deletion; production bootstrap credentials come from `MVP_PASSWORD`.
 - AI conversation history is transient for the active chat session. Keep it out of SQLite and discard it when the chat session ends, the user logs out, or the page is reloaded.
-- The MVP has one board per user and fixed columns whose titles can be renamed. Cards can be created, edited, deleted, and moved between columns.
-- Keep changes and dependencies minimal. Do not add features outside this plan without approval.
+- Users now own multiple named boards with descriptions. Each board retains five fixed, renameable columns; cards support CRUD, movement, priorities, and due dates.
+- The user's comprehensive-app expansion request supersedes the original single-account, single-board limits. Keep the expansion focused on private workspaces rather than introducing team roles or shared-board permissions.
 - Keep `OPENROUTER_API_KEY` in the project-root `.env`; do not expose it to the browser, commit it, or print it in logs.
 - Use `openai/gpt-oss-120b` through OpenRouter. Automated tests must not require live credentials or incur API costs; live connectivity checks are explicit and opt-in.
 - Preserve the existing frontend visual language and the palette in the root `AGENTS.md`.
@@ -142,15 +142,15 @@
 - [x] Submit user questions and transient history to the backend AI route.
 - [x] Review structured AI-proposed changes and apply them to the visible board only after explicit user approval.
 - [x] Clear chat history on logout and page reload; keep the board and chat usable when the provider is unavailable.
-- [ ] Complete accessibility and responsive checks for the board and sidebar.
+- [x] Complete accessibility and responsive checks for the board and sidebar.
 
 **Tests:**
 
 - [x] Frontend unit tests cover chat rendering, submission, errors, history continuity, applying approved board data, discarding proposals, logout errors, and externally updated column titles (16 tests total across the suite).
-- [ ] Playwright tests cover mocked assistant proposals, approval, reload/logout history clearing, and provider failure; execution requires Docker Desktop's Linux engine.
-- [ ] Run the backend suite; `uv` and `pytest` are not installed in the current environment.
+- [x] Playwright tests cover mocked assistant proposals, approval, reload/logout history clearing, provider failure, and responsive layouts. The production export is also tested directly through FastAPI without requiring Docker.
+- [x] Run the backend suite with isolated test databases and enforced coverage.
 
-**Success criteria:** Implemented: a signed-in user can chat with the assistant; responses appear in the sidebar; proposed board updates are reviewed and become visible/persistent after approval; transient history is discarded at the defined session boundaries. Browser-level and accessibility verification remain open.
+**Success criteria:** Verified locally: a signed-in user can chat with the assistant; responses appear in the sidebar; proposed board updates are reviewed and become visible/persistent after approval; transient history is discarded at session and board boundaries. Browser workflows and responsive/keyboard checks pass against the static production export served by FastAPI.
 
 ## Part 11: Deployment Readiness
 
@@ -161,7 +161,7 @@
 - [x] Select Render Free with Supabase Free PostgreSQL; keep SQLite as the local default and initialize PostgreSQL from `DATABASE_URL`.
 - [x] Add a Render Blueprint for a Docker web service with generated session secret, required external database and login password, and health check.
 - [x] Document the Supabase Session pooler, ephemeral Render filesystem, provider inactivity limits, and local-data migration limitation.
-- [ ] Address missing login attempt throttling before public exposure.
+- [x] Add account attempt throttling before public exposure.
 - [ ] Create the Supabase project, configure Render secrets, and deploy the service.
 - [ ] Smoke-test the live service and verify persisted board changes across a Render redeploy.
 
@@ -174,3 +174,21 @@
 - Part 1 must be approved before Part 2 starts.
 - Part 5 schema and database approach must be approved before Part 6 starts.
 - Do not begin a later part until the current part's success criteria and tests pass, unless the user approves a change in scope or sequence.
+
+## UI Layout Refinement
+
+- The board fills the available page width. Columns share that width with a 260px minimum and scroll horizontally on smaller screens instead of squeezing cards or stacking stages.
+- The compact header shows card/stage counts. Card text uses the full card width; edit and delete use labeled icon buttons with visible keyboard focus.
+- The assistant sits beside the board at widths of 1200px and above and above it on smaller screens.
+- Responsive browser coverage checks 390, 768, 1440, 1920, and 2560px viewports, long unbroken text, assistant placement, scrolling, and keyboard-operated icon controls. Existing browser workflows cover persisted card edits, deletion, movement, authentication, and chat.
+
+## Workspace Expansion
+
+- [x] Add normalized unique usernames, salted scrypt password hashes, registration, password rotation, confirmed account deletion, and revocable sessions. Account attempt throttling is process-wide and in-memory.
+- [x] Add private board listing, creation, naming/descriptions, switching, and confirmed deletion, including an empty-workspace state.
+- [x] Scope every card, column, and assistant operation to an owned board. Clear assistant history and proposals when switching boards.
+- [x] Add task priority, optional due dates, overdue indicators, search, priority filtering, completion summaries, and an accessible stage selector alongside drag-and-drop.
+- [x] Migrate both database backends to schema version 4. Preserve existing boards/cards and prevent SQLite from recycling deleted account or board IDs.
+- [x] Add backend and frontend coverage gates, SQLite integration tests, browser workflows, and CI including opt-in PostgreSQL integration.
+
+The original numbered MVP stages above are historical records. Current schema, API compatibility, and verification instructions are documented in DATABASE.md and TESTING.md. Live hosted deployment still requires account-owner provisioning; no cloud resources are created by this expansion.

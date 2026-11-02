@@ -16,18 +16,27 @@ type AIChatSidebarProps = {
   board: BoardData;
   onClose: () => void;
   onBoardChange: (board: BoardData) => void;
+  boardId?: number;
 };
 
 const operationSummary = (operation: BoardOperation, board: BoardData) => {
   const cardTitle = (cardId: string) => board.cards[cardId]?.title ?? cardId;
   const columnTitle = (columnId: string) =>
     board.columns.find((column) => column.id === columnId)?.title ?? columnId;
+  const metadata = (value: { priority?: string; due_date?: string | null }) => [
+    value.priority ? `priority ${value.priority}` : "",
+    value.due_date !== undefined ? `due date ${value.due_date ?? "cleared"}` : "",
+  ].filter(Boolean).join("; ");
 
   switch (operation.type) {
     case "create_card":
-      return `Create “${operation.title}” in ${columnTitle(operation.column_id)}`;
+      return `Create “${operation.title}” in ${columnTitle(operation.column_id)}${metadata(operation) ? ` (${metadata(operation)})` : ""}`;
     case "update_card":
-      return `Update “${cardTitle(operation.card_id)}”`;
+      return `Update “${cardTitle(operation.card_id)}”: ${[
+        operation.title !== undefined ? `title “${operation.title}”` : "",
+        operation.details !== undefined ? `details “${operation.details}”` : "",
+        metadata(operation),
+      ].filter(Boolean).join("; ")}`;
     case "move_card":
       return `Move “${cardTitle(operation.card_id)}” to ${columnTitle(operation.column_id)}`;
     case "delete_card":
@@ -42,6 +51,7 @@ export const AIChatSidebar = ({
   board,
   onClose,
   onBoardChange,
+  boardId,
 }: AIChatSidebarProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [question, setQuestion] = useState("");
@@ -60,11 +70,11 @@ export const AIChatSidebar = ({
     setError("");
     setIsPending(true);
     try {
-      const response = await fetch("/api/ai/chat", {
+      const response = await fetch(boardId ? `/api/boards/${boardId}/ai/chat` : "/api/ai/chat", {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: submittedQuestion, history: messages }),
+        body: JSON.stringify({ question: submittedQuestion, history: messages.slice(-20) }),
       });
       if (!response.ok) {
         const failure = (await response.json().catch(() => null)) as
@@ -98,7 +108,7 @@ export const AIChatSidebar = ({
     setError("");
     setIsApplying(true);
     try {
-      const response = await fetch("/api/ai/apply", {
+      const response = await fetch(boardId ? `/api/boards/${boardId}/ai/apply` : "/api/ai/apply", {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
@@ -141,7 +151,7 @@ export const AIChatSidebar = ({
       id="ai-chat-sidebar"
       aria-label="AI assistant"
       hidden={!isOpen}
-      className="order-first flex max-h-[720px] min-h-[320px] flex-col overflow-hidden rounded-lg border border-[var(--stroke)] bg-white shadow-[var(--shadow)] 2xl:order-last 2xl:sticky 2xl:top-6"
+      className="ai-chat-panel flex max-h-[720px] min-h-[400px] min-w-0 flex-col overflow-hidden rounded-2xl border border-[var(--stroke)] bg-white shadow-[var(--shadow)]"
     >
       <header className="flex items-center justify-between border-b border-[var(--stroke)] px-4 py-3">
         <h2 className="font-display text-lg font-semibold text-[var(--navy-dark)]">
@@ -166,7 +176,7 @@ export const AIChatSidebar = ({
           messages.map((message, index) => (
             <div
               key={`${message.role}-${index}`}
-              className={`max-w-[90%] whitespace-pre-wrap rounded-lg border px-3 py-2 text-sm leading-5 ${
+              className={`max-w-[90%] whitespace-pre-wrap [overflow-wrap:anywhere] rounded-lg border px-3 py-2 text-sm leading-5 ${
                 message.role === "user"
                   ? "ml-auto border-[var(--primary-blue)]/20 bg-[var(--primary-blue)]/10 text-[var(--navy-dark)]"
                   : "border-[var(--stroke)] bg-[var(--surface)] text-[var(--navy-dark)]"
@@ -182,7 +192,7 @@ export const AIChatSidebar = ({
           </p>
         )}
         {pendingOperations.length > 0 && (
-          <section aria-label="Proposed board changes" className="rounded-md border border-[var(--stroke)] p-3">
+          <section aria-label="Proposed board changes" className="rounded-md border border-[var(--stroke)] p-3 [overflow-wrap:anywhere]">
             <h3 className="text-sm font-semibold text-[var(--navy-dark)]">Proposed changes</h3>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-[var(--navy-dark)]">
               {pendingOperations.map((operation, index) => (
