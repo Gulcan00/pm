@@ -1,0 +1,8 @@
+{
+	"mcpServers": {
+		"my-mcp-server-1b651678": {
+			"url": "https://mcp.massive.com/",
+			"type": "http"
+		}
+	}
+}
